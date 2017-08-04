@@ -15,6 +15,10 @@ from progress import Progress
 from model import imsat, params
 from args import args
 from collections import defaultdict
+from collections import Counter
+import sqlite3
+
+DATABASE_FILE = 'projectfile.sqlite3'
 
 # load MNIST
 train_images, train_labels = dataset.load_train_images()
@@ -73,6 +77,23 @@ def compute_accuracy(images, labels_true):
 
     for dup in sorted(list_duplicates(labels_predict)):
         print dup
+
+    # find most frequent in () ~ sorted_data[x][0]
+    conn = sqlite3.connect(DATABASE_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT spos_wordset, epos_wordset, file_name FROM projectfilelist")
+    for row in cur.fetchall():
+        sPos = row[0]
+        ePos = row[1]
+        file_name = row[2]
+        print 'idx: (' + str(sPos) + ', ' + str(ePos) + ')'
+        if sPos is not None:
+            count = Counter(labels_predict[sPos:ePos])
+            freq = count.most_common()
+            max_freq = freq[0]
+            print file_name + ' type: ' + str(max_freq)
+    conn.close()
+
 
     predict_counts = np.zeros((10, config.num_clusters), dtype=np.float32)
     for i in xrange(60000):

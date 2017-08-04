@@ -15,6 +15,7 @@ from random import randint
 from operator import itemgetter
 import bisect
 from collections import Counter
+from collections import defaultdict
 
 PICKLE_DATA = 'mecabed_data.npy'
 IPADIC_PATH = '/usr/local/lib/mecab/dic/ipadic/'
@@ -346,12 +347,22 @@ def testSQLITE2():
     db.close()
     pass
 
+def list_duplicates(seq):
+    tally = defaultdict(list)
+    for i, item in enumerate(seq):
+        tally[item].append(i)
+    return ((key, len(locs)) for key, locs in tally.items()
+            if len(locs) > 1)
+
 def testSQLITE3():
-    a = range(60000)
-    b = range(60000)
+    a = range(60000)  # type
+    b = range(60000)  # idx
 
     for i in range(60000):
         a[i], b[i] = randint(1, 10), randint(1, 60000)
+
+    for dup in sorted(list_duplicates(a)):
+        print dup
 
     data = zip(a, b)
     print data
@@ -381,11 +392,23 @@ def testSQLITE3():
 
     pass
 
+def testSQLITE4():
+    conn = sqlite3.connect(DATABASE_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT spos_wordset, epos_wordset FROM projectfilelist")
+    for row in cur.fetchall():
+        if row[0] is not None:
+            print str(row[0]) + ', ' + str(row[1])
+        
+    pass
+
 #testSQLITE()
 
 #testSQLITE2()
 
-testSQLITE3()
+#testSQLITE3()
+
+testSQLITE4()
 
 #words = exportAll()
 #to_pickle(PICKLE_DATA, words)
