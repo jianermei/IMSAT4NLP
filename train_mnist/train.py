@@ -86,12 +86,13 @@ def compute_accuracy(images, labels_true):
         sPos = row[0]
         ePos = row[1]
         file_name = row[2]
-        print 'idx: (' + str(sPos) + ', ' + str(ePos) + ')'
         if sPos is not None:
+            print 'idx: (' + str(sPos) + ', ' + str(ePos) + ')'
             count = Counter(labels_predict[sPos:ePos])
             freq = count.most_common()
-            max_freq = freq[0]
-            print file_name + ' type: ' + str(max_freq)
+            if len(freq) > 0:
+                max_freq = freq[0]
+                print file_name.encode('utf-8') + ' type: ' + str(max_freq)
     conn.close()
 
 
