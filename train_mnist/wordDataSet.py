@@ -395,10 +395,11 @@ def testSQLITE3():
 def testSQLITE4():
     conn = sqlite3.connect(DATABASE_FILE)
     cur = conn.cursor()
-    cur.execute("SELECT spos_wordset, epos_wordset FROM projectfilelist")
+    cur.execute("SELECT spos_wordset, epos_wordset, file_name FROM projectfilelist")
     for row in cur.fetchall():
         if row[0] is not None:
-            print str(row[0]) + ', ' + str(row[1])
+            fileName = row[2]
+            print fileName + str(row[0]) + ', ' + str(row[1])
         
     pass
 
