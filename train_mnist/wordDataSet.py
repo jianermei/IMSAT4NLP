@@ -393,14 +393,26 @@ def testSQLITE3():
     pass
 
 def testSQLITE4():
+    
     conn = sqlite3.connect(DATABASE_FILE)
     cur = conn.cursor()
     cur.execute("SELECT spos_wordset, epos_wordset, file_name FROM projectfilelist")
-    for row in cur.fetchall():
+    rows = cur.fetchall()
+    fileNames = ["" for x in range(len(rows))]
+    fileTypes = range(len(rows))
+    i = 0
+    for row in rows:
+        fileName = row[2]
+        fileNames[i] = fileName
+        fileType = randint(1, 10)
+        fileTypes[i] = fileType
         if row[0] is not None:
-            fileName = row[2]
             print fileName + str(row[0]) + ', ' + str(row[1])
-        
+        i += 1
+    
+    cur.executemany('UPDATE projectfilelist SET file_category=? WHERE file_name=?', zip(fileTypes, fileNames))
+    conn.commit()
+    conn.close()
     pass
 
 #testSQLITE()

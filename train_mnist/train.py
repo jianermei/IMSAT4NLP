@@ -82,17 +82,28 @@ def compute_accuracy(images, labels_true):
     conn = sqlite3.connect(DATABASE_FILE)
     cur = conn.cursor()
     cur.execute("SELECT spos_wordset, epos_wordset, file_name FROM projectfilelist")
-    for row in cur.fetchall():
+    rows = cur.fetchall()
+    fileNames = ["" for x in range(len(rows))]
+    fileTypes = range(len(rows))
+    i = 0
+    for row in rows:
         sPos = row[0]
         ePos = row[1]
         file_name = row[2]
+        fileNames[i] = file_name
+        fileTypes[i] = -1
         if sPos is not None:
             print 'idx: (' + str(sPos) + ', ' + str(ePos) + ')'
             count = Counter(labels_predict[sPos:ePos])
             freq = count.most_common()
             if len(freq) > 0:
                 max_freq = freq[0]
+                fileTypes[i] = max_freq[0]
                 print file_name.encode('utf-8') + ' type: ' + str(max_freq)
+        i += 1
+
+    cur.executemany('UPDATE projectfilelist SET file_category=? WHERE file_name=?', zip(fileTypes, fileNames))
+    conn.commit()
     conn.close()
 
 
