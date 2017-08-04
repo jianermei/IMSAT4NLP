@@ -374,7 +374,7 @@ def testSQLITE3():
     print "Greater than target", idx[index]
     print "Smaller than or equal to target", idx[index - 1]
 
-    # TODO: find most frequent in () ~ sorted_data[x][0]
+    # find most frequent in () ~ sorted_data[x][0]
     count = Counter(fType[0:idx[index]])
     freq = count.most_common()
     print freq
