@@ -16,11 +16,12 @@ from operator import itemgetter
 import bisect
 from collections import Counter
 from collections import defaultdict
+import jaconv
 
 PICKLE_DATA = 'mecabed_data.npy'
 IPADIC_PATH = '/usr/local/lib/mecab/dic/ipadic/'
 IPADIC_UTF8_PATH = '/var/lib/mecab/dic/ipadic-utf8/'
-PROJECT_PATH = u'./trialdata/'
+PROJECT_PATH = u'/home/huang/trialdata'
 FILECONTENT_PATH = './fileContent.txt'
 WORDSFILE_PATH = './wordList.txt'
 KAKASIFILE_PATH = './kakasiResult.txt'
@@ -219,17 +220,35 @@ def exportAll():
 
 
 def romanize(wordfile, romajifile):
-    print('Romanization is running..! ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-    execCommand = 'cat ' + wordfile + ' | kakasi -Ja -Ha -Ka -Ea -s -i utf-8 -o utf-8 > ' + romajifile
-    resp = commands.getoutput('%s' % (execCommand))
-    print('Romanization done! (' + resp + ') ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    # print('Romanization is running..! ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    # execCommand = 'cat ' + wordfile + ' | kakasi -Ja -Ha -Ka -Ea -s -i utf-8 -o utf-8 > ' + romajifile
+    # resp = commands.getoutput('%s' % (execCommand))
+    # print('Romanization done! (' + resp + ') ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    #
+    # print('Collecting romaji words... (' + resp + ') ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    # with open(romajifile, 'r') as f:
+    #     content = f.readlines()
+    # content = [x.strip() for x in content]
+    # print('Collecting romaji words done! (' + resp + ') ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    
+    with open(wordfile, 'r') as f:
+        words = f.readlines()
+    words = [x.strip() for x in words]
 
-    print('Collecting romaji words... (' + resp + ') ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-    with open(romajifile, 'r') as f:
-        content = f.readlines()
-    content = [x.strip() for x in content]
-    print('Collecting romaji words done! (' + resp + ') ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-    return content
+    print('Romanization is running..! ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    rmf = codecs.open(romajifile, 'a', 'utf8')
+    romajilist = ['' for x in xrange(len(words))]
+    for word in words:
+        word = jaconv.h2z(word.encode('utf-8'))
+        execCommand = 'echo ' + word.replace('､', '').replace('－', '') + ' | kakasi -Ja -Ha -Ka -Ea -s -i utf-8 -o utf-8'
+        resp = commands.getoutput('%s' % (execCommand))
+        # print(word + ': ' + resp)
+        romajilist.append(resp)
+        rmf.write(resp.encode('utf-8') + '\n')
+    print('Romanization done! ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+
+    rmf.close()
+    return romajilist
     pass
 
 
@@ -421,7 +440,7 @@ def testSQLITE4():
 
 #testSQLITE3()
 
-testSQLITE4()
+#testSQLITE4()
 
 #words = exportAll()
 #to_pickle(PICKLE_DATA, words)
@@ -429,7 +448,7 @@ testSQLITE4()
 #print('read words ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
 #saveWords(words, WORDSFILE_PATH)
-#romajiWords = romanize(WORDSFILE_PATH, KAKASIFILE_PATH)
+romajiWords = romanize(WORDSFILE_PATH, KAKASIFILE_PATH)
 #dataset = string2Vector(romajiWords, DATASET_DIM)
 
 def load_word_set():
