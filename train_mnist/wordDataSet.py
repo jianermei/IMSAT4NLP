@@ -17,6 +17,9 @@ import bisect
 from collections import Counter
 from collections import defaultdict
 import jaconv
+import re
+import csv
+import collections
 
 PICKLE_DATA = 'mecabed_data.npy'
 IPADIC_PATH = '/usr/local/lib/mecab/dic/ipadic/'
@@ -174,11 +177,22 @@ def exportAll():
     conn.execute(u"DELETE FROM projectfilelist")
 
     file_names = []
+    project_names = []
     full_file_paths = get_filepaths(PROJECT_PATH)
     for file_path in full_file_paths:
         # if not os.path.splitext(basename(file_path))[1] in ['.ppt', '.pptx', '.pptm']:
         #     # only need ppt, pptx, pptm
         #     continue
+        path = os.path.dirname(file_path)
+        foundProject = False
+        for folder in path.split('/'):
+            regexp = re.compile('PJ\d{6}|T\d{5}')
+            if regexp.search(folder):
+                project_names.append(basename(folder))
+                foundProject = True
+                break
+        if not foundProject:
+            print('A particular project: ' + path)
         file_names.append(os.path.splitext(basename(file_path))[0])
 
     fess_contents_list = query_fessfile(query_words=file_names, db=conn)
@@ -215,6 +229,9 @@ def exportAll():
         file_idx += 1
     print('Parsing end. ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
+    cur = conn.cursor()
+    cur.executemany('UPDATE projectfilelist SET project_name=? WHERE file_name=?', zip(project_names, file_names))
+    conn.commit()
     conn.close()
     return mecabed_list
 
@@ -384,7 +401,7 @@ def list_duplicates(seq):
     tally = defaultdict(list)
     for i, item in enumerate(seq):
         tally[item].append(i)
-    return ((key, len(locs)) for key, locs in tally.items()
+    return ((key, locs) for key, locs in tally.items()
             if len(locs) > 1)
 
 def testSQLITE3():
@@ -448,6 +465,35 @@ def testSQLITE4():
     conn.close()
     pass
 
+def loadCSV():
+    project_names = []
+    file_types = []
+    with open('projectFile.csv', 'rb') as f:
+        reader = csv.reader(f)
+        your_list = list(reader)
+    
+    first_item = True
+    for item in your_list:
+        if first_item:
+            first_item = False
+            continue
+        project_names.append(item[4])
+        file_types.append(item[5])
+
+    for dup in sorted(list_duplicates(project_names)):
+        #print '-----------------------'
+        #print dup
+        project_name = dup[0]
+        part_file_types = []
+        for file_type_idx in dup[1]:
+            part_file_types.append(file_types[file_type_idx])
+        #print(project_name)
+        #print part_file_types
+        counter = collections.Counter(part_file_types)
+        #print(counter)
+        print(project_name + ', ' + str(counter.keys()[0]))
+    pass
+
 #testSQLITE()
 
 #testSQLITE2()
@@ -455,6 +501,8 @@ def testSQLITE4():
 #testSQLITE3()
 
 #testSQLITE4()
+
+loadCSV()
 
 #words = exportAll()
 #to_pickle(PICKLE_DATA, words)
