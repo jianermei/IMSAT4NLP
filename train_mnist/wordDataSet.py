@@ -239,8 +239,22 @@ def romanize(wordfile, romajifile):
     rmf = codecs.open(romajifile, 'a', 'utf8')
     romajilist = ['' for x in xrange(len(words))]
     for word in words:
-        word = jaconv.h2z(word.encode('utf-8'))
-        execCommand = 'echo ' + word.replace('､', '').replace('－', '') + ' | kakasi -Ja -Ha -Ka -Ea -s -i utf-8 -o utf-8'
+        word = jaconv.h2z(word.decode('utf-8'))
+        word = word.encode('utf-8')
+        word = word.replace('､', '')
+        word = word.replace('－', '')
+        word = word.replace('】', '')
+        word = word.replace('①', '1')
+        word = word.replace('②', '2')
+        word = word.replace('③', '3')
+        word = word.replace('④', '4')
+        word = word.replace('⑤', '5')
+        word = word.replace('⑥', '6')
+        word = word.replace('⑦', '7')
+        word = word.replace('⑧', '8')
+        word = word.replace('⑨', '9')
+        word = word.replace('⑩', '10')
+        execCommand = 'echo ' + word + ' | kakasi -Ja -Ha -Ka -Ea -s -i utf-8 -o utf-8'
         resp = commands.getoutput('%s' % (execCommand))
         # print(word + ': ' + resp)
         romajilist.append(resp)
@@ -448,17 +462,20 @@ def testSQLITE4():
 #print('read words ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
 #saveWords(words, WORDSFILE_PATH)
-romajiWords = romanize(WORDSFILE_PATH, KAKASIFILE_PATH)
+#romajiWords = romanize(WORDSFILE_PATH, KAKASIFILE_PATH)
 #dataset = string2Vector(romajiWords, DATASET_DIM)
 
 def load_word_set():
     #words = exportAll()
     #to_pickle(PICKLE_DATA, words)
-    words = unpickle(PICKLE_DATA)
-    print('read words ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    #words = unpickle(PICKLE_DATA)
+    #print('read words ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
     #saveWords(words, WORDSFILE_PATH)
-    romajiWords = romanize(WORDSFILE_PATH, KAKASIFILE_PATH)
+    #romajiWords = romanize(WORDSFILE_PATH, KAKASIFILE_PATH)
+    with open(KAKASIFILE_PATH, 'r') as f:
+        romajiWords = f.readlines()
+    romajiWords = [x.strip() for x in romajiWords]
     dataset = string2Vector(romajiWords, DATASET_DIM)
     
     return dataset
