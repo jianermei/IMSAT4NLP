@@ -60,7 +60,7 @@ def get_filepaths(directory):
     return file_paths  # Self-explanatory.
 
 
-def query_fessfile(query_words, db):
+def query_fessfile(query_words, db=None):
     des = 'http://10.155.37.21:8081'
     content_list = []
     # query_words =[u'GUI', u'VxWorks', u'Windows', u'医療', u'OS', u'通信', u'UI', u'リスク', u'課題', u'施策']
@@ -123,9 +123,10 @@ def query_fessfile(query_words, db):
                 pass
             pass
 
-        db.execute(u"""INSERT INTO projectfilelist(FILE_NAME,FILE_LIST_IDX)
+        if db is not None:
+            db.execute(u"""INSERT INTO projectfilelist(FILE_NAME,FILE_LIST_IDX)
                     VALUES (?, ?)""", (query_word, file_idx,))
-        db.commit()
+            db.commit()
 
     #f.close()
     return content_list
@@ -494,6 +495,27 @@ def loadCSV():
         print(project_name + ', ' + str(counter.keys()[0]))
     pass
 
+
+def saveProjectContents():
+    filename = 'ProjectType9Contents.txt'
+    file_names = []
+    full_file_paths = get_filepaths(u'/home/huang/ProjectType9')
+    for file_path in full_file_paths:
+        # if not os.path.splitext(basename(file_path))[1] in ['.ppt', '.pptx', '.pptm']:
+        #     # only need ppt, pptx, pptm
+        #     continue
+        file_names.append(os.path.splitext(basename(file_path))[0])
+
+    fess_contents_list = query_fessfile(query_words=file_names)
+    f = codecs.open(filename, 'a', 'utf8')
+    for fileContent in fess_contents_list:
+        inc = 0
+        for line in fileContent:
+            f.write(line + '\n')
+    f.close()
+
+    pass
+
 #testSQLITE()
 
 #testSQLITE2()
@@ -502,7 +524,9 @@ def loadCSV():
 
 #testSQLITE4()
 
-loadCSV()
+#loadCSV()
+
+saveProjectContents()
 
 #words = exportAll()
 #to_pickle(PICKLE_DATA, words)
