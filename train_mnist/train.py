@@ -10,19 +10,21 @@ from chainer import functions as F
 
 sys.path.append(os.path.split(os.getcwd())[0])
 import dataset
-import wordDataSet
+import dataHelper
 from progress import Progress
 from model import imsat, params
 from args import args
 from collections import defaultdict
 from collections import Counter
 import sqlite3
+import db_tools
 
-DATABASE_FILE = 'projectfile.sqlite3'
+
+#DATABASE_FILE = 'projectfile.sqlite3'
 
 # load MNIST
 train_images, train_labels = dataset.load_train_images()
-train_wordset = wordDataSet.load_word_set()
+train_wordset = dataHelper.loadWordSet()
 # train_images_l, train_labels_l, train_images_u = dataset.create_semisupervised(train_images, train_labels, num_labeled_data=args.num_labeled_data)
 train_images_l, train_labels_l, train_images_u = dataset.create_semisupervised(train_wordset, train_labels,
                                                                                num_labeled_data=args.num_labeled_data)
@@ -79,33 +81,9 @@ def compute_accuracy(images, labels_true):
         print dup
 
     # find most frequent in () ~ sorted_data[x][0]
-    conn = sqlite3.connect(DATABASE_FILE)
-    cur = conn.cursor()
-    cur.execute("SELECT spos_wordset, epos_wordset, file_name FROM projectfilelist")
-    rows = cur.fetchall()
-    fileNames = ["" for x in range(len(rows))]
-    fileTypes = range(len(rows))
-    i = 0
-    for row in rows:
-        sPos = row[0]
-        ePos = row[1]
-        file_name = row[2]
-        fileNames[i] = file_name
-        fileTypes[i] = -1
-        if sPos is not None:
-            print 'idx: (' + str(sPos) + ', ' + str(ePos) + ')'
-            count = Counter(labels_predict[sPos:ePos])
-            freq = count.most_common()
-            if len(freq) > 0:
-                max_freq = freq[0]
-                fileTypes[i] = max_freq[0]
-                print file_name.encode('utf-8') + ' type: ' + str(max_freq)
-        i += 1
-
-    cur.executemany('UPDATE projectfilelist SET file_category=? WHERE file_name=?', zip(fileTypes, fileNames))
-    conn.commit()
-    conn.close()
-
+    conn = db_tools.open_db(DATABASE_FILE)
+    db_tools.update_file_type(conn=conn, words_type=labels_predict)
+    db_tools.close(conn)
 
     predict_counts = np.zeros((10, config.num_clusters), dtype=np.float32)
     for i in xrange(60000):

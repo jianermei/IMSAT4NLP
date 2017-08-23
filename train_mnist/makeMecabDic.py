@@ -49,7 +49,7 @@ def query_fessfile():
 
     for query_word in file_names:
         response = requests.get(
-            des + '/fessfile/json?q=title:' + query_word.encode('utf-8'))
+            des + '/fessfile/json?q=title:' + query_word.decode('utf-8'))
         # response.encoding = response.apparent_encoding
         # pprint.pprint(response.json())
 

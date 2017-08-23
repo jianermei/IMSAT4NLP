@@ -12,10 +12,26 @@ import time
 import codecs
 import commands
 from datetime import datetime
+from os.path import expanduser
+from shutil import copy2
+import numpy as np
+import jaconv
+import sqlite3
+import re
+import db_tools
 
+HOME = expanduser("~")
 IPADIC_PATH = '/usr/local/lib/mecab/dic/ipadic/'
 IPADIC_UTF8_PATH = '/var/lib/mecab/dic/ipadic-utf8/'
-PROJECT_PATH = u'./trialdata/'
+PROJECT_PATH = HOME + '/WuXiSampleData/'
+FESS_FILE_SERVER = '10.155.37.21:8081'
+TERMEXTRACT_SERVER = '10.120.175.86:9006'
+USER_DIC_PATH = '/mecabdic'
+FRAME_SIZE = 28 * 28  # size of picture's pixels in mnist
+MECABEDFILE_PATH = './mecabedWordList.txt'
+ROMAJIFILE_PATH = './romajiWordList.txt'
+DATABASE_FILE = 'projectFileWithType.sqlite3'
+
 
 def get_filepaths(directory):
     """
@@ -35,73 +51,46 @@ def get_filepaths(directory):
 
     return file_paths  # Self-explanatory.
 
-def query_fessfile():
-    des = 'http://10.155.37.21:8081'
-    digest_list = []
-    content_list = []
-    # query_words =[u'GUI', u'VxWorks', u'Windows', u'医療', u'OS', u'通信', u'UI', u'リスク', u'課題', u'施策']
-    # query_words = [u'憲章']
-    file_names = []
 
-    full_file_paths = get_filepaths(PROJECT_PATH)
-    for file_path in full_file_paths:
-        file_names.append(os.path.splitext(basename(file_path))[0])
+def clear(word):
+    word = jaconv.h2z(word)  # half-width character to full-width character
+    word = word.encode('utf-8')
+    word = word.replace('､', '')
+    word = word.replace('－', '')
+    word = word.replace('】', '')
+    word = word.replace('①', '1')
+    word = word.replace('②', '2')
+    word = word.replace('③', '3')
+    word = word.replace('④', '4')
+    word = word.replace('⑤', '5')
+    word = word.replace('⑥', '6')
+    word = word.replace('⑦', '7')
+    word = word.replace('⑧', '8')
+    word = word.replace('⑨', '9')
+    word = word.replace('⑩', '10')
+    return word
 
-    for query_word in file_names:
-        response = requests.get(
-            des + '/fessfile/json?q=title:' + query_word.encode('utf-8'))
-        # response.encoding = response.apparent_encoding
-        # pprint.pprint(response.json())
 
-        if 'result' in response.json()['response']:
-            resp_ret = response.json()['response']['result']
-        else:
-            print('file name: ' + query_word)
-            print('digest   : NONE')
-            continue
+def recursive_len(item):
+    if type(item) == list:
+        return sum(recursive_len(subitem) for subitem in item)
+    else:
+        return 1
 
-        digest = [ret['digest'] for ret in resp_ret]
-        # digest_list.append(digest)
-        print('file name: ' + query_word)
-        print('digest   : ' + digest[0])
-        content = [ret['content'] for ret in resp_ret]
-        content_list.append(content)
-        pass
 
-    return content_list
+def addUserDic(dic_file):
+    # find whether dic folder exists
+    directory = HOME + USER_DIC_PATH
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    # then copy dic into dic folder
+    copy2(dic_file, directory)
+    pass
 
-TERMEXTRACT_SERVER = '10.120.175.86'
-TERMEXTRACT_PORT = '9006'
-
-def term_analysis(sentence):
-    ret_list = []
-    des = 'http://' + TERMEXTRACT_SERVER + ':' + TERMEXTRACT_PORT
-
-    post_resp = requests.post(
-        des+'/text',
-        json.dumps({"count": 1, "textlist": [sentence]}),
-        headers={'Content-Type': 'application/json'})
-    # pprint.pprint(response.json())
-
-    # TODO: it's a temporary method
-    time.sleep(2)
-
-    text_id = post_resp.json()['_id']
-    print('text_id: ' + text_id)
-    get_resp = requests.get(des + '/text' + '/' + text_id + '/keyword')
-    term_list = get_resp.json()['_items'][0]['termlist']
-
-    onetime = True
-    for term in term_list:
-         if onetime:
-             print('term: ' + term['word'])
-             onetime = False
-         ret_list.append(term['word'])
-
-    return ret_list
 
 def term2dic(terms_list):
-    dic_name = 'projectTrialData.dic'
+    ts = str(int(time.time()))
+    dic_name = 'user_' + ts + '.dic'
     word_list = []
     for terms in terms_list:
         for term in terms:
@@ -127,13 +116,120 @@ def term2dic(terms_list):
                     '    ' + wordlist_name
     resp = commands.getoutput(userdicCommand)
     print('mecab creating result: ' + resp)
+    
+    return dic_name
 
-    pass
+
+def term_analysis(sentence):
+    ret_list = []
+    des = 'http://' + TERMEXTRACT_SERVER
+
+    post_resp = requests.post(
+        des+'/text',
+        json.dumps({"count": 1, "textlist": [sentence]}),
+        headers={'Content-Type': 'application/json'})
+    # pprint.pprint(response.json())
+
+    # TODO: it's a temporary method
+    time.sleep(2)
+
+    text_id = post_resp.json()['_id']
+    print('text_id: ' + text_id)
+    get_resp = requests.get(des + '/text' + '/' + text_id + '/keyword')
+    term_list = get_resp.json()['_items'][0]['termlist']
+
+    onetime = True
+    for term in term_list:
+         if onetime:
+             print('term: ' + term['word'])
+             onetime = False
+         ret_list.append(term['word'])
+
+    return ret_list
+
+
+def query_fessfile(query_words, db=None):
+    des = 'http://' + FESS_FILE_SERVER
+    content_list = []
+    # query_words =[u'GUI', u'VxWorks', u'Windows', u'医療', u'OS', u'通信', u'UI', u'リスク', u'課題', u'施策']
+    # query_words = [u'憲章']
+
+    #f = codecs.open(FILECONTENT_PATH, 'a', 'utf8')
+
+    for query_word in query_words:
+        file_idx = -1
+
+        first_time = True
+        old_query_word = None
+        while True:
+            base_url = des + '/fessfile/json?q=title:' + query_word
+            if '(' in base_url:
+                base_url = base_url.replace('(', '\(')
+            if ')' in base_url:
+                base_url = base_url.replace(')', '\)')
+
+            if first_time:
+                first_time = False
+                query_url = base_url
+                pass
+
+            response = requests.get(query_url)
+
+            resp = response.json()['response']
+            if 'result' in resp:
+                resp_ret = resp['result']
+                page_count = resp['page_count']
+                page_number = resp['page_number']
+                page_size = resp['page_size']
+                record_count = resp['record_count']
+            else:
+                print('file name: ' + query_word)
+                print('digest   : NONE')
+                if old_query_word == query_word:
+                    break
+                else:
+                    old_query_word = query_word
+                    continue
+
+            digest = [ret['digest'] for ret in resp_ret]
+            # digest_list.append(digest)
+            print('file name: ' + query_word)
+            print('digest   : ' + digest[0])
+            fileContent = [ret['content'] for ret in resp_ret
+                                            if ret['content'] != '']
+            if len(fileContent) > 0:
+                content_list.append(fileContent)
+                #for line in fileContent:
+                #    f.write(line + '\n')
+                file_idx = len(content_list) - 1
+
+            if page_number * page_size >= record_count:
+                break
+            else:
+                increasement = page_number * page_size
+                query_url = base_url + '&start=' + str(increasement)
+                pass
+            pass
+
+        if db is not None:
+            db.execute(u"""INSERT INTO projectfilelist(FILE_NAME,FILE_LIST_IDX)
+                    VALUES (?, ?)""", (query_word, file_idx,))
+            db.commit()
+
+    #f.close()
+    return content_list
+
 
 def makeMecabDic():
-    terms_list = []
     print('query fess ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-    fess_contents_list = query_fessfile()
+    terms_list = []
+    file_names = []
+
+    full_file_paths = get_filepaths(PROJECT_PATH)
+    for file_path in full_file_paths:
+        file_names.append(os.path.splitext(basename(file_path))[0].decode('utf-8'))
+        
+    fess_contents_list = query_fessfile(query_words=file_names)
 
     print('get term ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
     for contents in fess_contents_list:
@@ -143,6 +239,158 @@ def makeMecabDic():
             pass
 
     print('create dic ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-    term2dic(terms_list)
+    dic_file = term2dic(terms_list)
+    addUserDic(dic_file)
 
+
+def mecab_analysis(sentence):
+    t = mc.Tagger('-Ochasen -d {}'.format(IPADIC_UTF8_PATH))
+    sentence = sentence.replace('\n', ' ')
+    text = sentence.encode('utf-8')
+
+    # encoded_result = t.parse(text)
+    # print encoded_result
+
+    node = t.parseToNode(text)
+    ret_list = []
+    while node.next:
+        if node.surface != "":
+            # print node.surface + '\t' + node.feature
+            word_type = node.feature.split(",")[0]
+            # if word_type in ["名詞", "形容詞", "動詞"]:
+            if word_type in ["名詞"]:
+                plain_word = node.feature.split(",")[6]
+                if plain_word != "*":
+                    #print('          ' + plain_word)
+                    #f.write(plain_word.decode('utf-8') + '\n')
+                    ret_list.append(plain_word.decode('utf-8'))
+        node = node.next
+
+    return ret_list
+
+
+# porting from stringToTensor() of Crepe
+def strings2Tensor(words, l):
+    alphabet = "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+-=<>()[]{}^"
+    dict = {}
+    i = 0
+    for c in alphabet:
+        dict[c] = i
+        i += 1
+
+    num = len(words)
+    dim = l
+    t = np.zeros((num, dim), dtype=np.float32)
+
+    idx = 0
+    for word in words:
+        s = word.lower()
+
+        lvalue = len(s) - l
+        rvalue = 0
+        sPos = len(s)
+        ePos = max(lvalue, rvalue)
+        inc = -1
+
+        for i in range(sPos, ePos, inc):
+            if s[i-1] in alphabet:
+                t[idx][len(s) - i] = dict[s[i-1]]
+                pass
+            pass
+        pass
+        idx += 1
     pass
+    return t
+
+    
+def romanize(wordlist):
+    mecabed_file = MECABEDFILE_PATH
+    romaji_file = ROMAJIFILE_PATH
+    num_word = recursive_len(wordlist)
+    romajilist = ['' for x in xrange(num_word)]
+
+    # save word list to csv file(ipadic format)
+    print('Romanization mecabed words... ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    f = codecs.open(mecabed_file, 'a', 'utf8')
+    rf = codecs.open(romaji_file, 'a', 'utf8')
+    
+    for list in wordlist:
+        for word in list:
+            f.write(word + '\n')
+            word = clear(word)
+            execCommand = 'echo ' + word + ' | kakasi -Ja -Ha -Ka -Ea -s -i utf-8 -o utf-8'
+            resp = commands.getoutput('%s' % (execCommand))
+            # print(word + ': ' + resp)
+            romajilist.append(resp)
+            rf.write(resp.decode('utf-8') + '\n')
+            
+    rf.close()
+    f.close()
+    print('Romanization done! ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+
+
+def get_project_name(file_path):
+    pj_name = ''
+    dir_path = os.path.dirname(file_path)
+
+    foundProject = False
+    for folder in dir_path.split('/'):
+        regexp = re.compile('PJ\d{6}|T\d{5}')  # PJ123456 or T12345
+        if regexp.search(folder):
+            pj_name = basename(folder)
+            foundProject = True
+            break
+    
+    if not foundProject:
+        print('A particular project: ' + dir_path)
+
+    return pj_name
+
+
+def loadWords():
+    conn = db_tools.init(DATABASE_FILE)
+    mecabed_list = []
+    file_names = []
+    project_names = []
+    
+    full_file_paths = get_filepaths(PROJECT_PATH)
+    for file_path in full_file_paths:
+        project_name = get_project_name(file_path)
+        project_names.append(project_name.decode('utf-8'))
+        file_names.append(os.path.splitext(basename(file_path))[0].decode('utf-8'))
+    
+    fess_contents_list = query_fessfile(query_words=file_names, db=conn)
+    
+    print('Parsing sentences... ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    file_idx = 0
+    sPos = 0
+    for fileContent in fess_contents_list:
+        inc = 0
+        for line in fileContent:
+            mecabed_content = mecab_analysis(line)
+            mecabed_list.append(mecabed_content)
+            inc += len(mecabed_content)
+        # TODO: update range of file's word index(num of words in fileContent)
+        sPos = db_tools.update_word_index(conn=conn, file_idx=file_idx, word_cursor=sPos, num_word=inc)
+        file_idx += 1
+    print('Parsing end. ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    
+    db_tools.update_project_name(conn, file_names, project_names)
+    
+    db_tools.close(conn)
+    
+    return mecabed_list
+
+
+def loadWordSet():
+    words = loadWords()
+    
+    romanize(words)
+    with open(ROMAJIFILE_PATH, 'r') as f:
+        romajis = f.readlines()
+    romajiWords = [x.strip() for x in romajis]
+
+    dataset = strings2Tensor(romajiWords, FRAME_SIZE)
+    
+    return dataset
+

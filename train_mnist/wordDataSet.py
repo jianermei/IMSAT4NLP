@@ -74,7 +74,7 @@ def query_fessfile(query_words, db=None):
         first_time = True
         old_query_word = None
         while True:
-            base_url = des + '/fessfile/json?q=title:' + query_word.encode('utf-8')
+            base_url = des + '/fessfile/json?q=title:' + query_word.decode('utf-8')
             if '(' in base_url:
                 base_url = base_url.replace('(', '\(')
             if ')' in base_url:
@@ -135,7 +135,7 @@ def query_fessfile(query_words, db=None):
 def mecab_analysis(sentence):
     t = mc.Tagger('-Ochasen -d {}'.format(IPADIC_UTF8_PATH))
     sentence = sentence.replace('\n', ' ')
-    text = sentence.encode('utf-8')
+    text = sentence.decode('utf-8')
 
     # encoded_result = t.parse(text)
     # print encoded_result
@@ -257,8 +257,8 @@ def romanize(wordfile, romajifile):
     rmf = codecs.open(romajifile, 'a', 'utf8')
     romajilist = ['' for x in xrange(len(words))]
     for word in words:
-        word = jaconv.h2z(word.decode('utf-8'))
-        word = word.encode('utf-8')
+        word = jaconv.h2z(word.decode('utf-8')) # half-width character to full-width character
+        word = word.decode('utf-8')
         word = word.replace('､', '')
         word = word.replace('－', '')
         word = word.replace('】', '')
@@ -276,7 +276,7 @@ def romanize(wordfile, romajifile):
         resp = commands.getoutput('%s' % (execCommand))
         # print(word + ': ' + resp)
         romajilist.append(resp)
-        rmf.write(resp.encode('utf-8') + '\n')
+        rmf.write(resp.decode('utf-8') + '\n')
     print('Romanization done! ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
     rmf.close()
@@ -526,7 +526,7 @@ def saveProjectContents():
 
 #loadCSV()
 
-saveProjectContents()
+#saveProjectContents()
 
 #words = exportAll()
 #to_pickle(PICKLE_DATA, words)
@@ -553,3 +553,5 @@ def load_word_set():
     return dataset
 
 pass
+
+load_word_set()
