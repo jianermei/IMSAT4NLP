@@ -193,8 +193,8 @@ def query_fessfile(query_words, db=None):
 
             digest = [ret['digest'] for ret in resp_ret]
             # digest_list.append(digest)
-            print('file name: ' + query_word)
-            print('digest   : ' + digest[0])
+            print('file name: ' + query_word.encode('utf-8'))
+            print('digest   : ' + digest[0].encode('utf-8'))
             fileContent = [ret['content'] for ret in resp_ret
                                             if ret['content'] != '']
             if len(fileContent) > 0:

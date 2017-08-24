@@ -78,7 +78,7 @@ def update_file_type(conn, words_type):
             if len(freq) > 0:
                 max_freq = freq[0]
                 fileTypes[i] = max_freq[0]
-                print file_name.decode('utf-8') + ' type: ' + str(max_freq)
+                print file_name.encode('utf-8') + ' type: ' + str(max_freq)
         i += 1
 
     cur = conn.cursor()

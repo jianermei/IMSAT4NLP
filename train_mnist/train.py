@@ -21,6 +21,7 @@ import db_tools
 
 
 #DATABASE_FILE = 'projectfile.sqlite3'
+DATABASE_FILE = 'projectFileWithType.sqlite3'
 
 # load MNIST
 train_images, train_labels = dataset.load_train_images()
@@ -86,8 +87,8 @@ def compute_accuracy(images, labels_true):
     db_tools.close(conn)
 
     predict_counts = np.zeros((10, config.num_clusters), dtype=np.float32)
-    for i in xrange(60000):
-        # for i in xrange(len(images)):
+    #for i in xrange(60000):
+    for i in xrange(len(images)):
         p = probs[i]
         label_predict = labels_predict[i]
         label_true = labels_true[i]
