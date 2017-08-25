@@ -29,6 +29,7 @@ PROJECT_PATH = HOME + '/WuXiSampleData/'
 FESS_FILE_SERVER = '10.155.37.21:8081'
 TERMEXTRACT_SERVER = '10.120.175.86:9006'
 USER_DIC_PATH = '/mecabdic'
+USER_DIC_NAME = 'user_project.dic'
 FRAME_SIZE = 28 * 28  # size of picture's pixels in mnist
 MECABEDFILE_PATH = './mecabedWordList.txt'
 ROMAJIFILE_PATH = './romajiWordList.txt'
@@ -92,7 +93,8 @@ def addUserDic(dic_file):
 
 def term2dic(terms_list):
     ts = str(int(time.time()))
-    dic_name = 'user_' + ts + '.dic'
+    # dic_name = 'user_' + ts + '.dic'
+    dic_name = USER_DIC_NAME
     word_list = []
     for terms in terms_list:
         for term in terms:
@@ -103,7 +105,7 @@ def term2dic(terms_list):
     f = codecs.open(wordlist_name, 'a', 'utf8')
     for i in range(word_list.__len__()):
         word = word_list[i]
-        csv_line = word + u',,,1,名詞,一般,*,*,*,*,' + word + u',*,*,ByMeCabEst'
+        csv_line = word.decode('utf-8') + u',,,1,名詞,一般,*,*,*,*,' +  word.decode('utf-8') + u',*,*,ByMeCabEst'
         f.write(csv_line + '\n')
     f.close()
 
@@ -143,9 +145,9 @@ def term_analysis(sentence):
     onetime = True
     for term in term_list:
          if onetime:
-             print('term: ' + term['word'])
+             print('term: ' + term['word'].encode('utf-8'))
              onetime = False
-         ret_list.append(term['word'])
+         ret_list.append(term['word'].encode('utf-8'))
 
     return ret_list
 
@@ -246,8 +248,8 @@ def makeMecabDic():
 
 
 def mecab_analysis(sentence):
-    dic_directory = HOME + USER_DIC_PATH
-    t = mc.Tagger('-Ochasen -d {}'.format(dic_directory))
+    dic_path = HOME + USER_DIC_PATH + '/' + USER_DIC_NAME
+    t = mc.Tagger('-Ochasen -u {}'.format(dic_path))
     sentence = sentence.replace('\n', ' ')
     text = sentence.encode('utf-8')
 
