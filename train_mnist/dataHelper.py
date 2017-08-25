@@ -19,6 +19,8 @@ import jaconv
 import sqlite3
 import re
 import db_tools
+from collections import defaultdict
+from collections import Counter
 
 HOME = expanduser("~")
 IPADIC_PATH = '/usr/local/lib/mecab/dic/ipadic/'
@@ -394,3 +396,152 @@ def loadWordSet():
     
     return dataset
 
+
+def list_duplicates(seq):
+    tally = defaultdict(list)
+    for i, item in enumerate(seq):
+        tally[item].append(i)
+    return ((key, locs) for key, locs in tally.items()
+            if len(locs) >= 1)
+
+
+def find_project_type(db_file=DATABASE_FILE):
+    conn = db_tools.open_db(db_file)
+    rows = db_tools.get_rows(conn)
+    project_names = []
+    file_types = []
+    project_type_dic = {}
+
+    for row in rows:
+        project_name = row[4]  # project_name
+        file_category = row[5]  # file_category
+        project_names.append(project_name)
+        file_types.append(file_category)
+
+    for dup in sorted(list_duplicates(project_names)):
+        #print '-----------------------'
+        #print dup
+        project_name = dup[0]
+        part_file_types = []
+        for file_type_idx in dup[1]:
+            part_file_types.append(file_types[file_type_idx])
+        #print(project_name)
+        #print part_file_types
+        counter = Counter(part_file_types)
+        #print(counter)
+        print(project_name + ', ' + str(counter.keys()[0]))
+        project_type_dic[project_name] = counter.keys()[0]
+
+    db_tools.close(conn)
+    return project_type_dic
+
+
+def find_project_file(db_file=DATABASE_FILE):
+    conn = db_tools.open_db(db_file)
+    rows = db_tools.get_rows(conn)
+    project_file_dic = {}
+    
+    for row in rows:
+        file_name = row[0]  # file_name
+        project_name = row[4]  # project_name
+        
+        if project_name not in project_file_dic:
+            project_file_dic[project_name] = []
+        project_file_dic[project_name].append(file_name)
+
+    db_tools.close(conn)
+    return project_file_dic
+
+
+def find_project_term(project_file):
+    project_term_dic = {}
+    
+    for project_name in project_file:
+        file_names = project_file[project_name]
+        fess_contents_list = query_fessfile(query_words=file_names)
+        
+        terms_list = []
+        print('get term ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+        for contents in fess_contents_list:
+            for content in contents:
+                terms = term_analysis(content)
+                terms_list.append(terms)
+
+        project_term_dic[project_name] = terms_list
+    
+    return project_term_dic
+
+
+def makeJSON(db_file=DATABASE_FILE, json_type='a'):
+    project_type = find_project_type(db_file)
+    project_file = find_project_file(db_file)
+    project_term = find_project_term(project_file)
+    
+    type_project_dict = {}
+    for k, v in project_type.iteritems():
+        type_project_dict.setdefault(v, []).append(k)
+
+    if json_type is '0' or 'a':
+        json0 = []
+        for type, projects in type_project_dict.iteritems():
+            # print('type:      ' + str(type))
+            # print ('projects: ')
+            # print(projects)
+        
+            project_term_dic = {}
+            project_term_dic['name'] = projects
+            project_term_dic['keyword'] = []
+        
+            for project in projects:
+                # print('project name: ' + project)
+                term_lists = project_term[project]
+                for term_list in term_lists:
+                    # print('term: ' + term_list[0])
+                    project_term_dic['keyword'] += term_list
+                project_term_dic['keyword'] = list(set(project_term_dic['keyword']))
+            json0.append(project_term_dic)
+    
+        f0 = open('json0.txt', 'w')
+        f0.write(json.dumps(json0))
+        f0.close()
+    
+    if json_type is '1' or 'a':
+        json1 = {}
+        for type, projects in type_project_dict.iteritems():
+            # print('type:      ' + str(type))
+            # print ('projects: ')
+            # print(projects)
+
+            json1[type] = {}
+            for project in projects:
+                # print('project name: ' + project)
+                term_lists = project_term[project]
+                for term_list in term_lists:
+                    # print('term: ' + term_list[0])
+                    term_project_dict = dict((term, project) for term in term_list)
+                    json1[type].update(term_project_dict)
+    
+        f1 = open('json1.txt', 'w')
+        f1.write(json.dumps(json1))
+        f1.close()
+
+    if json_type is '2' or 'a':
+        json2 = {}
+        for type, projects in type_project_dict.iteritems():
+            # print('type:      ' + str(type))
+            # print ('projects: ')
+            # print(projects)
+            if type not in json2:
+                json2[type] = []
+        
+            for project in projects:
+                # print('project name: ' + project)
+                term_lists = project_term[project]
+                for term_list in term_lists:
+                    # print('term: ' + term_list[0])
+                    json2[type] += term_list
+            json2[type] = list(set(json2[type]))
+    
+        f2 = open('json2.txt', 'w')
+        f2.write(json.dumps(json2))
+        f2.close()

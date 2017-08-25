@@ -553,5 +553,3 @@ def load_word_set():
     return dataset
 
 pass
-
-load_word_set()

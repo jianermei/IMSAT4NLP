@@ -24,7 +24,8 @@ def open_db(db_file):
 
 def get_rows(conn):
     cur = conn.cursor()
-    cur.execute("SELECT spos_wordset, epos_wordset, file_name FROM projectfilelist")
+    cur.execute("SELECT file_name, file_list_idx, spos_wordset, epos_wordset, project_name, file_category \
+                    FROM projectfilelist")
     rows = cur.fetchall()
     return rows
 
@@ -66,9 +67,9 @@ def update_file_type(conn, words_type):
     
     i = 0
     for row in rows:
-        sPos = row[0]
-        ePos = row[1]
-        file_name = row[2]
+        sPos = row[2]  # spos_wordset
+        ePos = row[3]  # epos_wordset
+        file_name = row[0]  # file_name
         fileNames[i] = file_name
         fileTypes[i] = -1
         if sPos is not None:
