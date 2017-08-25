@@ -176,6 +176,8 @@ def main():
 
         # counts_train, accuracy_train = compute_accuracy(train_images, train_labels)
         compute_accuracy(train_wordset, train_labels)
+        
+    dataHelper.makeJSON(DATABASE_FILE)
     # counts_test, accuracy_test = compute_accuracy(test_images, test_labels)
     # progress.show(num_updates_per_epoch, num_updates_per_epoch, {
     #	"loss": sum_loss / num_updates_per_epoch,
