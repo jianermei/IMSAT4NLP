@@ -246,7 +246,8 @@ def makeMecabDic():
 
 
 def mecab_analysis(sentence):
-    t = mc.Tagger('-Ochasen -d {}'.format(IPADIC_UTF8_PATH))
+    dic_directory = HOME + USER_DIC_PATH
+    t = mc.Tagger('-Ochasen -d {}'.format(dic_directory))
     sentence = sentence.replace('\n', ' ')
     text = sentence.encode('utf-8')
 

@@ -26,9 +26,9 @@ def load_mnist(data_filename, label_filename, num):
 				iamge = image * 2.0 - 1.0
 				images[i, j] = image
 
-			if i % 100 == 0 or i == num - 1:
-				sys.stdout.write("\rloading images ... ({} / {})".format(i + 1, num))
-				sys.stdout.flush()
+			#if i % 100 == 0 or i == num - 1:
+			#	sys.stdout.write("\rloading images ... ({} / {})".format(i + 1, num))
+			#	sys.stdout.flush()
 	sys.stdout.write("\n")
 	return images, label
 

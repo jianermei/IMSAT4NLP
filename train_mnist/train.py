@@ -23,6 +23,8 @@ import db_tools
 #DATABASE_FILE = 'projectfile.sqlite3'
 DATABASE_FILE = 'projectFileWithType.sqlite3'
 
+dataHelper.makeMecabDic()
+
 # load MNIST
 train_images, train_labels = dataset.load_train_images()
 train_wordset = dataHelper.loadWordSet()

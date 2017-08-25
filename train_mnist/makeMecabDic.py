@@ -146,5 +146,3 @@ def makeMecabDic():
     term2dic(terms_list)
 
     pass
-
-makeMecabDic()
