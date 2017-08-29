@@ -3,8 +3,6 @@ import chainer
 import layers
 import functions
 from util import get_weight_initializer
-import traceback
-
 
 class Sequential(object):
 	def __init__(self, weight_initializer=None, weight_std=None):
@@ -144,9 +142,6 @@ class Sequential(object):
 			self.layers.append(layer)
 
 	def __call__(self, *args, **kwargs):
-                # for line in traceback.format_stack():
-                #     print(line.strip())
-
 		assert self.built == True
 		x = None
 		activations = []
@@ -154,32 +149,22 @@ class Sequential(object):
 			kwargs["test"] = False
 		for link in self.links:
 			if isinstance(link, functions.dropout):
-				#print "link --> function.dropout"
 				x = link(args[0] if x is None else x, train=not kwargs["test"])
 			elif isinstance(link, chainer.links.BatchNormalization):
-				#print "link --> chainer.BatchNormalization"
 				x = link(args[0] if x is None else x, test=kwargs["test"])
 			elif isinstance(link, functions.gaussian_noise):
-				#print "link --> function.gaussian_noise"
 				x = link(args[0] if x is None else x, test=kwargs["test"])
 			elif isinstance(link, Residual):
-				#print "link --> Residual"
 				y = link(args[0] if x is None else x, test=kwargs["test"])
 				x = args[0] if x is None else x
 				x = y + x
 			else:
-				#print "link --> ???"
 				if x is None:
-					#print "link --> ???"
 					x = link(*args)
 				else:
 					x = link(x)
 					if isinstance(link, functions.ActivationFunction):
-						#print "link --> function.ActivationFunction"
 						activations.append(x)
-					else:
-						#print "link --> $%Y%-@*"
-						pass
 		if "return_activations" in kwargs and kwargs["return_activations"] == True:
 			return x, activations
 		return x
