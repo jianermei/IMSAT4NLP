@@ -13,7 +13,7 @@ class Progress(object):
 		print "Epoch {}/{}".format(current_epoch, total_epoch)
 
 	def get_progress_bar(self, current_step, total_steps, num_segments=30):
-		str = "{"
+		str = "["
 		base = total_steps / float(num_segments)
 		for seg in xrange(num_segments):
 			if base * (seg + 1) < current_step:
